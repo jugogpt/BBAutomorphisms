@@ -15,15 +15,13 @@
 ╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝ ╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚═╝╚══════╝
 ```
 
-# Intro/Overview 
+# Overview 
 
-Computational verification collection for our work exploring **Automorphisms of Bivariate Bicycle
-Codes via Refined CRT Components and Local Transfer Data"**
-Here we implement the forward problem (detect automorphisms of known BB codes)
-and the inverse problem (design BB codes with prescribed automorphism
-groups) on 
-
-We implement in Pure Python + NumPy but this should also work in a sage notebook.
+Computational verification scripts for work exploring **Automorphisms of Bivariate Bicycle
+Codes via a refined CRT components and local transfer data"** ring-representation approach.
+Here we implement the **forward problem** (detect automorphisms of known BB codes)
+and the **inverse problem** (design BB codes with prescribed automorphism
+groups) in Pure Python + NumPy (should also work in a SAGE notebook, though)
 
 ## Computational components 
 
