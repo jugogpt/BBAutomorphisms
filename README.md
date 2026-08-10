@@ -25,7 +25,7 @@ groups) in Pure Python + NumPy (should also work in a SAGE notebook, though)
 
 ## Project Contents
 
-**Summary: `bb_ring.py`, `bb_code.py` create the mathematical objects we will used in verification; `bb_automorphisms.py` runs the verification algorithms; `forward_benchmarks.py` and `inverse_design.py` check if constructions/automorphisms hold following the algorithm; `test_twisted_torus.py` runs algorihtm for special case (more on this in its own section); `run_all.py` run all above scripts at once.
+**Summary**: `bb_ring.py`, `bb_code.py` create the mathematical objects we will used in verification; `bb_automorphisms.py` runs the verification algorithms; `forward_benchmarks.py` and `inverse_design.py` check if constructions/automorphisms hold following the algorithm; `test_twisted_torus.py` runs algorihtm for special case (more on this in its own section); `run_all.py` run all above scripts at once.
 
 | File | Use in verification |
 |---|---|
