@@ -25,26 +25,22 @@ groups) in Pure Python + NumPy (should also work in a SAGE notebook, though)
 
 ## Project Contents
 
+**Summary: `bb_ring.py`, `bb_code.py` create the mathematical objects we will used in verification; `bb_automorphisms.py` runs the verification algorithms; `forward_benchmarks.py` and `inverse_design.py` check if constructions/automorphisms hold following the algorithm; `test_twisted_torus.py` runs algorihtm for special case (more on this in its own section); `run_all.py` run all above scripts at once.
+
 | File | Use in verification |
 |---|---|
 | `bb_ring.py` | Creates instances of the mathematical objects important to the forward and inverse algorithms: The ambient ring `R_{l,m} = F2[x,y]/(x^l-1,y^m-1)`; the full ring-automorphism catalog (multipliers, partial folds, full fold, shears, transpose); a 2×2 Smith-normal-form routine for reducing twisted torus presentations to the standard rectangular one. |
-| `bb_code.py` | This script builds `H_X=[A\|B]`, `H_Z=[B^T\|A^T]`, code `n,k` via exact GF(2) rank (n = number of physical qubits, k = number of logical qubits), brute-force minimum distance for small codes, and the full 2-generator stabilizer matrix `S = block_diag(H_X,H_Z)` as in our paper outline (section 2 I believe) |
+| `bb_code.py` | This script builds gates `H_X=[A\|B]`, `H_Z=[B^T\|A^T]`, code `n,k` via the GF(2) rank (n = number of physical qubits, k = number of logical qubits), brute-force minimum distance for small codes, and the full 2-generator stabilizer matrix `S = block_diag(H_X,H_Z)` as in our paper outline (section 2 I believe). |
 | `bb_automorphisms.py` | This is the script for our automorphism  detection engine (forward problem). Implements Corollary 3.6 (ring-level, cyclic-source case) and Theorem 3.2 (full 4-slot stabilizer-module case) as GF(2) row-space-equality tests, plus the concrete `gblock` catalog of eqs. (34)–(37) (swap-fold, CX-fold, Hadamard-fold ×2, CZ-fold). `report(...)` prints a full forward-problem scan for one code. |
 | `forward_benchmarks.py` | Builds and scans the four requested benchmark codes. |
 | `inverse_design.py` | Orbit-closure construction (a constructive proof of Corollary 3.6 with `w=1`) plus 8 worked examples: one per catalog symmetry, a multi-symmetry combination, a ring+stabilizer combination, and a "mixed" CRT-regime example. |
 | `test_twisted_torus.py` | Regression test for the Smith-normal-form reducer (~5000 random lattices + the exact `[[16,4,4]]` case). |
 | `run_all.py` | Runs everything above in one command. |
 
-In order to run everything and test yourself, paste
+To test yourself, paste
 ```
 python3 run_all.py
 
-```
-Individual pieces:
-```
-python3 test_twisted_torus.py
-python3 forward_benchmarks.py
-python3 inverse_design.py
 ```
 
 ## But how does this python correspond back to our math?
