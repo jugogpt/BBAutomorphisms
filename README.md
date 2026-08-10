@@ -23,11 +23,11 @@ Here we implement the **forward problem** (detect automorphisms of known BB code
 and the **inverse problem** (design BB codes with prescribed automorphism
 groups) in Pure Python + NumPy (should also work in a SAGE notebook, though)
 
-## Computational components 
+## Project Contents
 
 | File | Use in verification |
 |---|---|
-| `bb_ring.py` |  Processes information pertaining to objects of the forward and inverse algorithm: The ambient ring `R_{l,m} = F2[x,y]/(x^l-1,y^m-1)`; the full ring-automorphism catalog (multipliers, partial folds, full fold, shears, transpose); a 2×2 Smith-normal-form routine for reducing twisted torus presentations to the standard rectangular one. |
+| `bb_ring.py` | Creates instances of the mathematical objects important to the forward and inverse algorithms: The ambient ring `R_{l,m} = F2[x,y]/(x^l-1,y^m-1)`; the full ring-automorphism catalog (multipliers, partial folds, full fold, shears, transpose); a 2×2 Smith-normal-form routine for reducing twisted torus presentations to the standard rectangular one. |
 | `bb_code.py` | This script builds `H_X=[A\|B]`, `H_Z=[B^T\|A^T]`, code `n,k` via exact GF(2) rank (n = number of physical qubits, k = number of logical qubits), brute-force minimum distance for small codes, and the full 2-generator stabilizer matrix `S = block_diag(H_X,H_Z)` as in our paper outline (section 2 I believe) |
 | `bb_automorphisms.py` | This is the script for our automorphism  detection engine (forward problem). Implements Corollary 3.6 (ring-level, cyclic-source case) and Theorem 3.2 (full 4-slot stabilizer-module case) as GF(2) row-space-equality tests, plus the concrete `gblock` catalog of eqs. (34)–(37) (swap-fold, CX-fold, Hadamard-fold ×2, CZ-fold). `report(...)` prints a full forward-problem scan for one code. |
 | `forward_benchmarks.py` | Builds and scans the four requested benchmark codes. |
