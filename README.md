@@ -30,7 +30,7 @@ groups) in Pure Python + NumPy (should also work in a SAGE notebook, though)
 | File | Use in verification |
 |---|---|
 | `bb_ring.py` | Creates instances of the mathematical objects important to the forward and inverse algorithms: The ambient ring `R_{l,m} = F2[x,y]/(x^l-1,y^m-1)`; the full ring-automorphism catalog (multipliers, partial folds, full fold, shears, transpose); a 2×2 Smith-normal-form routine for reducing twisted torus presentations to the standard rectangular one. |
-| `bb_code.py` | This script builds gates `H_X=[A\|B]`, `H_Z=[B^T\|A^T]`, code `n,k` via the GF(2) rank (n = number of physical qubits, k = number of logical qubits), brute-force minimum distance for small codes, and the full 2-generator stabilizer matrix `S = block_diag(H_X,H_Z)` as in our paper outline (section 2 I believe). |
+| `bb_code.py` | This script builds gates `H_X=[A\|B]`, `H_Z=[B^T\|A^T]`, code `n,k` via the GF(2) rank (n = number of physical qubits, k = number of logical qubits), brute-force minimum distance for small codes, and the full 2-generator stabilizer matrix `S = block_diag(H_X,H_Z)` as in our paper outline. |
 | `bb_automorphisms.py` | This is the script for our automorphism  detection engine (forward problem). Implements Corollary 3.6 (ring-level, cyclic-source case) and Theorem 3.2 (full 4-slot stabilizer-module case) as GF(2) row-space-equality tests, plus the concrete `gblock` catalog of eqs. (34)–(37) (swap-fold, CX-fold, Hadamard-fold ×2, CZ-fold). `report(...)` prints a full forward-problem scan for one code. |
 | `forward_benchmarks.py` | Builds and scans the four requested benchmark codes. |
 | `inverse_design.py` | Orbit-closure construction (a constructive proof of Corollary 3.6 with `w=1`) plus 8 worked examples: one per catalog symmetry, a multi-symmetry combination, a ring+stabilizer combination, and a "mixed" CRT-regime example. |
@@ -49,7 +49,7 @@ python3 run_all.py
 0/1 array (`Ring.from_terms`, `Ring.mul` via circular convolution,
 `Ring.bar` for the antipode `f(x,y) → f(x⁻¹,y⁻¹)`).
 
-**Ring-automorphism catalog (Sec. 2.2).** Every entry — multiplier
+**Ring-automorphism catalog. ** Every entry — multiplier
 `ψ_(jx,jy)`, partial folds `θx, θy`, full fold `ι`, the shear family
 (size `d = gcd(l,m)`, `x ↦ x y^{s·m/d}`), and the transpose `τ` (when
 `l=m`) — is represented uniformly as a function on exponent pairs
@@ -60,7 +60,7 @@ brute-force scan exhaustively.
 
 **Forward detection = row-space equality (Corollary 3.6 / Theorem 3.2).**
 Rather than reconstructing the CRT component decomposition symbolically
-(Sec. 2.2–2.3, which needs Hensel lifts and factoring `x^l−1` over `F2`),
+(which needs Hensel lifts and factoring `x^l−1` over `F2`),
 detection is done by a numerically *equivalent* test that sidesteps that
 machinery entirely:
 
@@ -69,16 +69,15 @@ machinery entirely:
   and check `rowspace(H_X) = rowspace(H_X')` over GF(2). Since
   `rowspace(H_X) = R·(A,B)` *by definition* of the cyclic-submodule picture,
   this is exactly the statement `ψ(A,B) = w·(A,B)` for some unit `w`
-  (Theorem 3.1/3.5's "generators of a cyclic module over a finite local
+  (this is take from theorem 3.1/3.5's "generators of a cyclic module over a finite local
   ring differ by a unit," applied globally via `R ≅ ∏ J_c`).
 - **Full stabilizer level (`test_stabilizer_symmetry`, Thm 3.2):** build
   `S = block_diag(H_X,H_Z)` (the 2-generator matrix for
   `M = R·g_X ⊕ R·g_Z`, `g_X=(A,B,0,0)`, `g_Z=(0,0,B̄,Ā)`), apply `Φ = ψ⊕ψ⊕ψ⊕ψ`
-  to the four column-blocks, then apply a 4×4 `gblock` matrix (eqs. 34–37)
+  to the four column-blocks, then apply a 4×4 `gblock` matrix
   mixing the blocks, and again test row-space equality against the
   original `S`. This directly tests the `ψ_L=ψ_R` restriction of Theorem
-  3.2, covering pure code automorphisms, transversal-Hadamard/CX-fold
-  (Sec. 3.1.2–3.1.3), and CZ/S-fold (Sec. 3.1.4) symmetries in one sweep.
+  3.2, covering pure code automorphisms, transversal-Hadamard/CX-fold, and CZ/S-fold symmetries in one sweep.
 
 GF(2) rank and row-space equality are computed exactly via Gaussian
 elimination (`bb_code.gf2_rref_rank`, `same_rowspace`). We hoped to avoid floating point and heuristics here.
@@ -100,25 +99,25 @@ on the forward-problem benchmarks (`verify_group_invariance`), so the
 
 ## The forward-problem benchmark codes we use
 
-| Code | `(l,m)` | `A` | `B` | Regime (Thm 2.1) | Source |
+| Code | `(l,m)` | `A` | `B` | Regime | Source |
 |---|---|---|---|---|---|
 | `[[144,12,12]]` gross | `(12,6)` | `x³+y+y²` | `y³+x+x²` | even×even, `s_l=2,s_m=1` | Bravyi et al., arXiv:2308.07915 |
 | `[[72,12,6]]` BB6 | `(6,6)` | `x³+y+y²` | `y³+x+x²` | even×even, `s_l=s_m=1` | same |
 | `[[18,4,4]]` 6.6.6 color code | `(3,3)` | `x+1+y²` | `y+1+x²` | odd×odd, semisimple/PIGA | Wang et al., arXiv:2505.09684; errorcorrectionzoo.org/c/stab_18_4_4 |
 | `[[16,4,4]]` weight-8 self-dual BB | `(2,4)`* | `1+y+y³+xy³` | `1+y+y³+xy` | even×even, `s_l=1,s_m=2` | Liang & Chen, arXiv:2510.05211 (twisted-torus reduction, see below) |
 
-All four are verified from scratch: `H_X H_Z^T = 0` (CSS), `n = 2lm`,
+We verify all four: `H_X H_Z^T = 0` (CSS), `n = 2lm`,
 `k = n − rank(H_X) − rank(H_Z)` over GF(2) exactly matches the published
 `k`, and — for the two small codes — brute-force minimum distance over
 `ker(H_X)/rowspace(H_Z)` reproduces the published `d = 4` exactly.
 
 ### Special exception for`[[16,4,4]]`
 
-errorcorrectionzoo's own `[[16,4,4]]` "symplectic-double" code is a
-*different* object — a concatenation of the `[[4,2,2]]` code with its
-symplectic double — and is not natively presented as a straight
+The `[[16,4,4]]` "symplectic-double" code on errorcorrectionzoo is a
+*different* object that when have been testing above. It is a concatenation of the `[[4,2,2]]` code with its
+symplectic double. This notably is NOT natively presented as a straight
 `R_{l,m}`-type BB code, so it doesn't fit this paper's ambient-ring
-framework directly. Instead we use a genuinely-BB, same-parameter code:
+framework directly. Instead we use a BB code with the same-parameter:
 Liang & Chen's weight-8 self-dual BB code on a **twisted torus**,
 `f(x,y) = 1+x+y+y⁻¹` with lattice basis vectors `a1=(0,4)`, `a2=(2,2)`
 (i.e. relations `y⁴=1`, `x²y²=1`). `bb_ring.reduce_twisted_torus` finds the
@@ -146,22 +145,21 @@ Running `forward_benchmarks.py` scans the full ring-automorphism catalog
   — richest symmetry group of the four, consistent with it being the
   self-dual, odd×odd (semisimple) case where `A,B` are literally
   transposes of one another (`B(x,y)=A(y,x)`).
-- **`[[16,4,4]]`:** 16 ring-level hits (including a genuine shear symmetry,
+- **`[[16,4,4]]`:** 16 ring-level hits (including a shear symmetry,
   since `gcd(2,4)=2>1`), 40 stabilizer-level hits.
 
-Two important caveats about these counts, stated plainly: (1) the reported
+There are two important caveats about these "hits" to note: (1) the reported
 numbers are **raw hits** from the scan (they include the identity, and
 compositions that may correspond to the same physical permutation counted
-more than once under different `(φ, gblock)` labels) — turning this into a
-literal `|Aut|` would need deduplication by resulting physical permutation,
-which this toolkit does not attempt; (2) the scan restricts to `ψ_L=ψ_R`
-(Sec. 3's stated scope throughout Sec. 3.1–3.2) and to the six concrete
-`gblock` matrices from Sec. 3.1.2–3.1.4, not the full unconstrained
-symmetry group.
+more than once under different `(φ, gblock)` labels); turning this into a
+`|Aut|` would need deduplication by resulting physical permutation,
+which our toolkit does not attempt; (2) our scan restricts to `ψ_L=ψ_R` 
+automorphisms and to the six concrete `gblock` matrices, which does not
+a fully representative symmetry group.
 
 ## Inverse-problem worked examples (summary)
 
-`inverse_design.py` builds and *independently verifies* 8 codes:
+`inverse_design.py` builds and independently verifies 8 codes in these instances:
 
 1. **Single symmetry — multiplier** `ψ_(2,2)` on `(7,3)`: `[[42,6,d]]`.
 2. **Single symmetry — partial fold** `θx` on `(5,4)`: `[[40,8,d]]`.
@@ -187,13 +185,14 @@ the same `test_code_automorphism` / `scan_stabilizer_symmetries` routines
 used on the forward-problem benchmarks — i.e. the construction is not
 trusted blindly.
 
-## Known limitations / honest scope
+## Limitations we faced.
 
-- The CRT component decomposition (`R_{l,m} ≅ ∏ J_c`, Hensel lifts,
-  Frobenius orbits) from Sec. 2.2 is **not** implemented; detection instead
-  uses the numerically equivalent row-space test, which is exact but
-  doesn't expose the component-wise structure (units `ω_c`, transport maps
-  `T*_ψ`, etc.) that Sec. 3.2's *proof* machinery is built on.
+- The CRT component decomposition (the `R_{l,m} ≅ ∏ J_c`, Hensel lifts,
+  Frobenius orbits used in the by-hand algorithm) from are **not** implemented.
+  Our detection algorithm instead uses the numerically equivalent row-space test,
+  which is exact but doesn't expose the component-wise structure
+  (units `ω_c`, transport maps `T*_ψ`, etc.) that Sec. 3.2's *proof* machinery
+  is built on.
 - `ψ_L ≠ ψ_R` (Sec. 3.3) is out of scope, matching the outline's own
   stated restriction through Sec. 3.
 - Minimum distance is only computed by brute force for `n ≲ 26`; the two
