@@ -230,18 +230,23 @@ def report(name: str, ring: Ring, code: BBCode, include_shears: bool = True,
     d = code.min_distance_bruteforce()
     if d is not None:
         print(f"  distance (bruteforce) = {d}")
-    cat = full_catalog(ring.ell, ring.m, include_shears=include_shears)
-    print(f"  ring-automorphism group scanned (genuine BFS closure, Sec 2.2 catalog): {len(cat)} elements")
     hits = scan_code_automorphisms(ring, code, include_shears=include_shears)
-    no_swap = [h for h in hits if not h["swap_AB"]]
-    with_swap = [h for h in hits if h["swap_AB"]]
-    print(f"  code automorphisms found (ring-level, Cor. 3.6): {len(no_swap)}/{len(cat)} "
-          f"without A<->B swap, {len(with_swap)}/{len(cat)} with swap")
+    print(f"  code automorphisms found (ring-level, Cor. 3.6): {len(hits)}")
+    by_type = {}
+    for h in hits:
+        key = h["phi"].split("(")[0].strip().split(" o ")[0]
+        by_type.setdefault(key.split("(")[0], []).append(h)
+    # summarize by top-level automorphism family for readability
+    families = {}
+    for h in hits:
+        fam = _classify(h["phi"])
+        families.setdefault(fam, 0)
+        families[fam] += 1
+    for fam, cnt in sorted(families.items()):
+        print(f"    - {fam}: {cnt} hit(s) (incl. compositions), swap variants included")
     if full_stabilizer_scan:
         shits = scan_stabilizer_symmetries(ring, code, include_shears=include_shears)
-        print(f"  full stabilizer-module symmetries found (Thm 3.2, gblock catalog, "
-              f"{len(cat)} phi's x {len(GBLOCK_CATALOG)} gblocks = {len(cat)*len(GBLOCK_CATALOG)} tested): "
-              f"{len(shits)}")
+        print(f"  full stabilizer-module symmetries found (Thm 3.2, gblock catalog): {len(shits)}")
         gfam = {}
         for h in shits:
             gfam.setdefault(h["gblock"], 0)
@@ -250,4 +255,19 @@ def report(name: str, ring: Ring, code: BBCode, include_shears: bool = True,
             print(f"    - {g}: {cnt} hit(s)")
 
 
-
+def _classify(phi_name: str) -> str:
+    if "tau" in phi_name:
+        base = "transpose-containing"
+    elif "iota" in phi_name:
+        base = "full-fold-containing"
+    elif "theta_x" in phi_name and "theta_y" in phi_name:
+        base = "theta_x+theta_y-containing"
+    elif "theta_x" in phi_name:
+        base = "theta_x-containing"
+    elif "theta_y" in phi_name:
+        base = "theta_y-containing"
+    elif "shear" in phi_name and "c=0" not in phi_name.split("shear")[1][:6]:
+        base = "shear-containing"
+    else:
+        base = "pure multiplier"
+    return base

@@ -1,0 +1,513 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black}
+
+% --- theorem-like environments, mirroring the outline's own numbering style
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{lem}[thm]{Lemma}
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition}
+
+% --- a distinct, clearly-marked verbatim-quote block, so quoted material is
+%     never typographically confusable with this document's own claims.
+\newenvironment{paperquote}[1]{%
+  \def\paperquotecite{#1}%
+  \begin{quotation}\noindent\itshape\small
+}{%
+  \normalfont\par\hfill---\,\textsc{Outline}, \paperquotecite\medskip
+  \end{quotation}
+}
+\newcommand{\pq}[2]{\begin{paperquote}{#1}#2\end{paperquote}}
+
+% --- a marker for content that is MY supporting claim, not a paper quote
+\newenvironment{mynote}{%
+  \begin{quotation}\noindent\small
+}{%
+  \end{quotation}
+}
+
+\title{Computational Verification of BB Code Automorphisms:\\
+\large A Step-by-Step Correspondence to\\
+\textit{Automorphisms of Bivariate Bicycle Codes via Refined CRT\\
+Components and Local Transfer Data} (outline, AD, HS, JB, IC)}
+\author{Companion document to \texttt{bb\_automorphisms} toolkit}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document is a line-by-line correspondence between the computational
+forward-detection and inverse-design algorithms implemented in the
+\texttt{bb\_automorphisms} toolkit and the exact theorem, definition, and
+corollary statements of the outline paper that motivate them. Every
+paper-derived claim is set in a quotation block, attributed by section or
+theorem number, and followed immediately by the algorithm step that
+computationally realizes it. Passages set as \emph{notes} (unboxed) are the
+author's own supporting claims used to justify a computational shortcut;
+they are not verbatim statements from the outline and are flagged as such.
+\end{abstract}
+
+\tableofcontents
+
+%==============================================================================
+\section{Algebraic preliminaries quoted from the outline}
+%==============================================================================
+
+Every algorithm below operates on one of a small number of algebraic
+objects, all defined directly in the outline. We collect the exact
+definitions here so that later quotations can refer back to them without
+repetition.
+
+\subsection{The ambient ring $R_{\ell,m}$}
+
+\pq{\S2.2, eqs.\ (1)--(2)}{%
+``To understand BB codes we must first understand their ambient ring. Where
+GB codes live in $R_\ell^2$, BB codes instead live in $R_{\ell,m}^2$ where
+$R_{\ell,m} := R_\ell \otimes R_m$, and
+\[ R_\ell := \mathbb{F}_2[x]/\langle x^\ell - 1\rangle \]
+(and similarly for $R_m$, w.r.t the variable $y$).''
+Expanding: ``$R_{\ell,m} = \mathbb{F}_2[x,y]/\langle x^\ell-1,y^m-1\rangle
+\cong \mathbb{F}_2[x]/\langle x^\ell-1\rangle \otimes
+\mathbb{F}_2[y]/\langle y^m-1\rangle = R_\ell \otimes R_m$.''
+}
+
+\pq{\S2.2, eq.\ (3)}{%
+``Alternatively, we can view $R_{\ell,m}$ through its group algebra:
+$R_{\ell,m} \cong \mathbb{F}_2[C_\ell \times C_m]$, where ideals are
+bivariate abelian codes.''
+}
+
+\begin{mynote}
+\textbf{Computational representation.} A polynomial in $R_{\ell,m}$ is
+represented as a dense $\ell\times m$ array over $\mathbb{F}_2$ (class
+\texttt{bb\_ring.Ring}), indexed by the monomial basis
+$\{x^iy^j : 0\le i<\ell,\ 0\le j<m\}$ exactly as in eq.\ (2)--(3) above; ring
+multiplication is circular (group-algebra) convolution.
+\end{mynote}
+
+\subsection{The Fisher--Sehgal trichotomy}
+
+\pq{Thm.\ 2.1}{%
+``Theorem 2.1 (Fisher-Sehgal [7]). A group algebra $\mathbb{F}_p^k[G]$ is a
+principal ideal group algebra (PIGA) if and only if the Sylow $p$-subgroup
+of $G$ is cyclic.''
+}
+
+\pq{\S2.2}{%
+``With $G = C_\ell \times C_m$, the Sylow 2-subgroup is
+$C_{2^{s_\ell}} \times C_{2^{s_m}}$ and we arrive at the following
+trichotomy: [\ldots] in the case that both $\ell,m$ even, provably at least
+one ideal is not principal.''
+\par\smallskip
+\begin{tabular}{@{}lll@{}}
+\toprule
+Regime & Sylow 2-subgroup & PIGA? \\
+\midrule
+$\ell,m$ odd   & trivial & yes (and semisimple) \\
+$\ell,m$ mixed & $C_{2^s}$ cyclic & yes \\
+$\ell,m$ even  & $C_{2^{s_\ell}}\times C_{2^{s_m}}$ non-cyclic & no \\
+\bottomrule
+\end{tabular}
+}
+
+\subsection{The refined CRT decomposition and its ``H0'' property}
+
+\pq{Cor.\ 2.5, ``(H0)''}{%
+``Corollary 2.5 ((H0)). $R_{\ell,m} \cong \prod_{c\in C} J_c$ with every
+$J_c$ finite local, with no dependance on $\ell,m$ beyond being finite
+non-negative integers.''
+}
+
+This single fact --- that $R_{\ell,m}$, whether or not it is a principal
+ideal ring (Thm.\ 2.1), is \emph{always} a finite product of \emph{local}
+rings --- is what licenses every Nakayama-type argument used later, in both
+the $n=1$ (Cor.\ 3.6) and $n$-generated (Thm.\ 3.2) cases; see \S\ref{sec:shared}.
+
+\subsection{Bar involution, circulant lift, and code parameters}
+
+\pq{\S2.3.1}{%
+``$\overleftarrow{f}(x,y) := f(x^{-1},y^{-1})$'' \quad and \quad
+``Define the circulant matrix lifting operators:
+$\rho : x^iy^j \mapsto \mathrm{circ}_\ell(x^i)\otimes\mathrm{circ}_m(y^j)$.
+Setting $A=\rho(f_1)$, $B=\rho(f_2)$, we obtain the $H_X,H_Z$ parity check
+matrices: $H_X=[A|B]$, $H_Z=[B^T|A^T]$.''
+}
+
+\pq{\S2.3.1}{%
+``Such a code is a $[[2\ell m, k]]$ code, where
+$k = 2\dim(R_{\ell,m}/\langle f_1,f_2\rangle) =
+2\sum_{c\in C}\dim(J_c/\langle f_{1,c},f_{2,c}\rangle)$.''
+}
+
+\begin{mynote}
+\texttt{bb\_code.BBCode} builds $H_X,H_Z$ exactly via this $\rho$
+(\texttt{\_circulant\_lift}), and computes $k$ as $n-\mathrm{rank}(H_X)-
+\mathrm{rank}(H_Z)$ over $\mathbb{F}_2$ --- the direct GF(2)-linear-algebra
+form of the dimension count above, without evaluating the right-hand
+component sum $\sum_c\dim(J_c/\langle\cdot\rangle)$ explicitly.
+\end{mynote}
+
+\subsection{The 2-generated stabilizer module}
+
+\pq{\S2.3.1, eqs.\ (29)--(30)}{%
+``$\mathrm{StabSpace}(C) = \{(a\cdot f_1,\, a\cdot f_2,\, b\cdot
+\overleftarrow{f_2},\, b\cdot\overleftarrow{f_1}) \mid a,b\in R_{\ell,m}\}$
+[\ldots] This yields an $R_{\ell,m}\oplus R_{\ell,m}$ module, generated by
+$g_X=(f_1,f_2,0,0)$ and $g_Z=(0,0,\overleftarrow{f_2},\overleftarrow{f_1})$.''
+}
+
+\subsection{The ring-automorphism catalog}
+
+\pq{\S2.2}{%
+``Every group automorphism $\gamma\in\Gamma:=\mathrm{Aut}(G)$ extends to an
+$\mathbb{F}_2$-algebra automorphism of $R_{\ell,m}$; these are the ring
+automorphisms realizable as permutations of the $\ell\times m$ qubit grid.
+The catalog:
+\begin{enumerate}[label=\arabic*.,itemsep=2pt]
+\item Multipliers $\psi_{(j_x,j_y)}$: $x\mapsto x^{j_x}$, $y\mapsto
+  y^{j_y}$, $(j_x,j_y)\in(\mathbb{Z}/\ell)^\times\times(\mathbb{Z}/m)^\times$.
+\item Partial folds $\theta_x: x\mapsto x^{-1}, y\mapsto y$ and $\theta_y$:
+  involutions folding one axis, with no univariate analogue.
+\item The full fold $\iota=\theta_x\theta_y$, i.e.\ the antipode, the
+  multiplier $(-1,-1)$.
+\item Shears: $\mathrm{Hom}(\mathbb{Z}_\ell,\mathbb{Z}_m)\cong\mathbb{Z}_d$,
+  $d=\gcd(\ell,m)$; for $d>1$, $x\mapsto xy^{sm/d}$, $y\mapsto y$ (and
+  transposes) [\ldots]
+\item The transpose $\tau: x\leftrightarrow y$ when $\ell=m$.
+\end{enumerate}''
+}
+
+\pq{\S2.2}{%
+``Shifts (multiplication by $x^iy^j$) are deliberately excluded: they are
+$R_{\ell,m}$-module automorphisms, not ring automorphisms\ldots''
+}
+
+\begin{mynote}
+\texttt{bb\_ring.py} implements all five catalog families as explicit maps
+$(i,j)\mapsto(i',j')$ on exponents (functions \texttt{multiplier},
+\texttt{theta\_x}, \texttt{theta\_y}, \texttt{full\_fold},
+\texttt{shear\_family} \emph{and} \texttt{shear\_family\_transpose} for the
+parenthetical ``(and transposes)'' above, \texttt{transpose\_auto}).
+Item 4's transpose clause is easy to under-implement --- an earlier version
+of this toolkit omitted \texttt{shear\_family\_transpose} entirely; see
+\S\ref{sec:shared}.
+\end{mynote}
+
+%==============================================================================
+\section{The computational bridge: row space $=$ cyclic submodule}
+\label{sec:bridge}
+%==============================================================================
+
+\begin{mynote}
+This section states, precisely, the one non-paper-quoted fact that the
+entire computational approach rests on. It is not verbatim in the outline,
+but it is an immediate consequence of the group-algebra structure the
+outline itself uses throughout \S2.2--\S3.
+\end{mynote}
+
+\begin{lem}[Rowspace realizes the cyclic submodule]
+\label{lem:rowspace}
+For $R=\mathbb{F}_2[G]$ a group algebra and $g\in N$ (a free $R$-module),
+\[ R\cdot g \;=\; \mathrm{span}_{\mathbb{F}_2}\{s\cdot g : s\in G\}. \]
+\end{lem}
+\begin{proof}
+Every $r\in R$ is an $\mathbb{F}_2$-linear combination of group elements
+$s\in G$ (this is the definition of the group algebra), and the action of
+$R$ on $N$ is $\mathbb{F}_2$-linear, so $r\cdot g$ is the corresponding
+linear combination of the $s\cdot g$. Conversely each $s\cdot g$ is $r\cdot
+g$ for $r=s\in R$.
+\end{proof}
+
+Applied to $g=(f_1,f_2)\in N=R_{\ell,m}^2$: the matrix $H_X=[A|B]$ has one
+row per group element $s=x^iy^j\in G=\mathbb{Z}_\ell\times\mathbb{Z}_m$
+(the row indexed by $(i,j)$ is $s\cdot(f_1,f_2)$, exactly the circulant
+shift construction of \S2.3.1 quoted above), so by Lemma~\ref{lem:rowspace},
+\[ \mathrm{rowspace}(H_X) \;=\; R_{\ell,m}\cdot(f_1,f_2). \]
+That is, $H_X$'s row space \emph{is} the cyclic submodule $M_X$ that Thm.\
+3.1 and Cor.\ 3.6 (quoted in \S\ref{sec:forward} below) are statements
+about --- not an encoding of it, the object itself, as an
+$\mathbb{F}_2$-vector space. This is what lets every module-equality
+question below be answered by ordinary $\mathrm{GF}(2)$ Gaussian
+elimination.
+
+%==============================================================================
+\section{Forward problem: automorphism detection}
+\label{sec:forward}
+%==============================================================================
+
+\subsection{Algorithm F1 --- ring-level detection (Corollary 3.6)}
+
+\pq{\S3.1}{%
+``(H1) Semilinearity: There exists a ring automorphism $\psi\in
+\mathrm{Aut}(R_{\ell,m})$ such that, for all $r\in R_{\ell,m}, v\in N$,
+$\sigma(r\cdot v)=\psi(r)\cdot\sigma(v)$.
+(H2) Cyclic source: $M=R_{\ell,m}\cdot g$ for a single generator element
+$g\in N$\ldots''
+}
+
+\pq{Thm.\ 3.1}{%
+``Assume (H1), (H2). As $R_{\ell,m}$ is local at every component, we have
+that
+\[ \sigma(M)=M \iff \sigma(g)=w\cdot g \text{ for } w\in R_{\ell,m}^\times.
+\]
+Proof (Sketch). (H0) means that $\sigma(M)=R\cdot\sigma(g)$ is again
+cyclic, reducing to a question about when two cyclic modules with given
+generators coincide. At each component: $M_c=J_c\subseteq N_c$, with $g_c$
+the image of $g$. Apply Nakayama at each $c$, which we can do as $J_c$ is
+local even if $R_{\ell,m}$ is not\ldots Hence $r_c\in J_c^\times$ at every
+$c$, which turns a unit at every component into a global unit.''
+}
+
+\pq{Cor.\ 3.6}{%
+``Given a BB code $C$ with generator $(f_1,f_2)$ over $R_{\ell,m}$, $\phi$
+is a code automorphism of the code if $\phi((f_1,f_2))=u(f_1,f_2)$, where
+$u$ is a unit in $R_{\ell,m}^\times$.''
+}
+
+\begin{mynote}
+Algorithm F1 decides the right-hand side of Thm.\ 3.1/Cor.\ 3.6's
+``$\iff$'' \emph{without} constructing the component decomposition $J_c$ or
+the unit $w$ itself; it decides the left-hand side directly, via
+Lemma~\ref{lem:rowspace}, and the theorem's own equivalence licenses
+treating that as settling the right-hand side too.
+\end{mynote}
+
+\begin{algorithm}[H]
+\caption{Ring-level automorphism test (realizes Thm.\ 3.1 / Cor.\ 3.6)}
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{code $(\ell,m,A,B)$; candidate $\psi\in$ catalog; $\mathrm{swap}\in\{0,1\}$}
+\Output{\textsc{true} iff $\psi$ (composed with the slot-swap) is a code automorphism}
+$A' \gets \psi(A)$ \tcp*{apply $\psi$'s exponent-lattice map to every monomial of $A$}
+$B' \gets \psi(B)$\;
+\If{$\mathrm{swap}$}{swap $A'\leftrightarrow B'$ \tcp*{tests $\phi((f_1,f_2))\propto(f_2,f_1)$ instead of $(f_1,f_2)$}}
+$H_X' \gets [\rho(A')\,|\,\rho(B')]$ \tcp*{same construction as $H_X$, from \S2.3.1}
+$r_1,r_2,r_3 \gets \mathrm{rank}_{\mathbb F_2}(H_X),\ \mathrm{rank}_{\mathbb F_2}(H_X'),\ \mathrm{rank}_{\mathbb F_2}\!\begin{pmatrix}H_X\\H_X'\end{pmatrix}$\;
+\Return{$r_1=r_2=r_3$} \tcp*{$\iff \mathrm{rowspace}(H_X)=\mathrm{rowspace}(H_X') \iff \psi(f_1,f_2)=w(f_1,f_2),\ w\in R^\times$ \textbf{[Thm.\ 3.1]}}
+\end{algorithm}
+
+\subsection{Algorithm F2 --- full stabilizer-level detection (Theorem 3.2)}
+
+\pq{Thm.\ 3.2}{%
+``Assume (H1) holds. $R_{\ell,m}$ is still a per-component local ring. Let
+$M$ be generated by an $n$-tuple $g=(g_1,\ldots,g_n)$ of elements of $N$.
+Then
+\[ \sigma(M)=M \iff \exists\, g_{\mathrm{block}}\in M_n(R_{\ell,m}),\
+\sigma(g)=g_{\mathrm{block}}\,g,\ \text{and } g_{\mathrm{block}}\text{
+invertible at every } c. \]''
+}
+
+\pq{\S3.1.1}{%
+``$g_{\mathrm{ring}}$ elements act as coordinate permutations on a single
+$R_{\ell,m}$ element\ldots $g_{\mathrm{ring}}$ elements never act on two
+$R_{\ell,m}$ elements at once. [\ldots] $g_{\mathrm{block}}$ elements on the
+other hand govern interactions between $R_{\ell,m}^b$ module entries and
+encode transversal, fold transversal, and other low-depth unitary
+transformations\ldots''
+}
+
+The outline restricts its own worked examples to \emph{scalar} (0/1)
+$g_{\mathrm{block}}$ entries, i.e.\ $g_{\mathrm{block}}\in M_4(\mathbb{F}_2)$
+rather than the fully general $M_4(R_{\ell,m})$:
+
+\pq{\S3.1.2--\S3.1.4, eqs.\ (34)--(37)}{%
+Swap-fold: $\begin{psmallmatrix}0&I&0&0\\I&0&0&0\\0&0&0&I\\0&0&I&0\end{psmallmatrix}$
+(``corresponds to swapping on the $(i,i+\ell m)$ fold'').
+CX-fold: $\begin{psmallmatrix}I&I&0&0\\0&I&0&0\\0&0&I&0\\0&0&I&I\end{psmallmatrix}$
+(``corresponds to the action of a CNOT controlled on $i$, targeting
+$i+\ell m$'').
+Hadamard-type (two variants): $\begin{psmallmatrix}0&0&I&0\\0&0&0&I\\I&0&0&0\\0&I&0&0\end{psmallmatrix}$
+and $\begin{psmallmatrix}0&0&0&I\\0&0&I&0\\0&I&0&0\\I&0&0&0\end{psmallmatrix}$.
+CZ-fold: $\begin{psmallmatrix}I&0&0&0\\0&I&0&0\\I&0&I&0\\0&I&0&I\end{psmallmatrix}$
+(``CZ's along the $x^{-1}y^{-1}$ fold'').
+}
+
+\begin{algorithm}[H]
+\caption{Full stabilizer-module symmetry test (realizes Thm.\ 3.2, restricted to $\psi_L=\psi_R$ and scalar $g_{\mathrm{block}}$)}
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{code; candidate $\psi\in$ catalog; $g_{\mathrm{block}}\in\{$eqs.\ (34)--(37), identity$\}$}
+\Output{\textsc{true} iff $g_{\mathrm{block}}\circ(\psi\oplus\psi\oplus\psi\oplus\psi)$ preserves $M$}
+$S \gets \mathrm{blockdiag}(H_X,H_Z)$ \tcp*{$2\ell m\times 4\ell m$; row space $=M=R{\cdot}g_X\oplus R{\cdot}g_Z$ [eq.\ (29)--(30)]}
+\For{$k\gets 1$ \KwTo $4$}{permute column-block $k$ of $S$ by $\psi$'s grid map $\to S_1$ \tcp*{$\Phi=\psi\oplus\psi\oplus\psi\oplus\psi$, the $\psi_L=\psi_R$ case of $\S3.1$}}
+\ForEach{output block $j\in\{1,\ldots,4\}$}{block $j$ of $S_2 \gets \bigoplus_{i:\,g_{\mathrm{block}}[j,i]=1}$ (block $i$ of $S_1$)\;}
+$r_1,r_2,r_3 \gets \mathrm{rank}(S),\ \mathrm{rank}(S_2),\ \mathrm{rank}\!\begin{pmatrix}S\\S_2\end{pmatrix}$\;
+\Return{$r_1=r_2=r_3$} \tcp*{$\iff \exists\,g_{\mathrm{block}}$ as in Thm.\ 3.2 with $\sigma(g)=g_{\mathrm{block}}g$}
+\end{algorithm}
+
+\subsection{Algorithm F3 --- catalog construction and scan}
+
+\pq{\S2.2 (quoted in full above)}{See the five-item catalog list in \S1.6.}
+
+\begin{algorithm}[H]
+\caption{Catalog construction (BFS closure) and full scan}
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{$(\ell,m)$; code}
+\Output{all detected symmetries at both levels}
+$\mathcal{G} \gets \{$all multipliers$\}\cup\{\theta_x,\theta_y,\iota\}\cup\{$shear, shear-transpose families$\}\cup\{\tau$ if $\ell=m\}$ \tcp*{catalog item 1--5, \S2.2}
+$\Gamma \gets$ BFS closure of $\langle\mathcal{G}\rangle$ in $\mathrm{Sym}(\mathbb{Z}_\ell\times\mathbb{Z}_m)$, deduplicated by resulting permutation\;
+\ForEach{$\psi\in\Gamma$, $\mathrm{swap}\in\{0,1\}$}{run Algorithm F1$(\psi,\mathrm{swap})$\;}
+\ForEach{$\psi\in\Gamma$, $g_{\mathrm{block}}\in\{$eqs.\ (34)--(37)$\}\cup\{I\}$}{run Algorithm F2$(\psi,g_{\mathrm{block}})$\;}
+\end{algorithm}
+
+%==============================================================================
+\section{Inverse problem: automorphism design}
+\label{sec:inverse}
+%==============================================================================
+
+\pq{\S3.4 (section header only; body not yet drafted in the outline)}{%
+``3.4 Automorphism Design'' [the outline names this problem but the section
+itself is currently empty in the draft --- Algorithm I1 below is this
+document's proposed constructive solution, justified by Cor.\ 3.6 and Thm.\
+3.5, both already quoted.]
+}
+
+\subsection{Algorithm I1 --- orbit-closure construction}
+
+\pq{Thm.\ 3.5 (restated in \S4, ``Notation and Theorems to remember'')}{%
+``Theorem: Matching. [\ldots] $\sigma(M)=M \iff \sigma(g)=w\cdot g$ for some
+$w\in R^\times$.''
+}
+
+\pq{Cor.\ 3.6 (quoted above)}{%
+``$\phi$ is a code automorphism of the code if $\phi((f_1,f_2))=u(f_1,f_2)$,
+where $u$ is a unit in $R_{\ell,m}^\times$.''
+}
+
+\begin{mynote}
+Cor.\ 3.6 asks for \emph{some} unit $u$. Algorithm I1 satisfies it with the
+simplest possible unit, $u=1$, by construction: if $\phi$ literally fixes
+$A$ as a set of monomials ($\phi(A)=A$), the matching equation holds with
+$u=1$ trivially. Building such an $A$ requires no search: take $A$ to be a
+union of full orbits of the target automorphism group $\Gamma$ (the group
+generated by the catalog automorphisms one wants as symmetries) acting on
+$\mathbb{Z}_\ell\times\mathbb{Z}_m$.
+\end{mynote}
+
+\pq{Prop.\ 2.7 (``Star pairing'')}{%
+``The antipode permutes $C$ by the involution $c\mapsto c^*$, $(\alpha,
+\beta)\mapsto(\alpha^{-1},\beta^{-1})$, well defined on Frobenius
+orbits.''
+}
+
+\begin{mynote}
+\textbf{Not a direct paper quote.} Prop.\ 2.7 describes how the antipode
+acts on the CRT component set $C$; it does not, in the outline as drafted,
+state the fact Algorithm I1 actually needs, which is a fact about the
+\emph{catalog automorphisms themselves}: every catalog map in \S2.2 (items
+1--5) is $\mathbb{Z}$-linear on the exponent lattice $\mathbb{Z}_\ell\times
+\mathbb{Z}_m$, and $\overleftarrow{(\cdot)}=-\mathrm{Id}$ is central in
+$GL_2(\mathbb{Z})$, so $\phi\circ\overleftarrow{(\cdot)} =
+\overleftarrow{(\cdot)}\circ\phi$ for every catalog $\phi$. This is the
+author's own supporting lemma, consistent in spirit with Prop.\ 2.7 but
+distinct from it, and it is what licenses setting $B:=\overleftarrow{A}$ to
+get a second (Hadamard-fold) symmetry for free alongside whatever $\Gamma$
+was used to build $A$.
+\end{mynote}
+
+\begin{algorithm}[H]
+\caption{Orbit-closure construction (constructive Cor.\ 3.6, $u=1$)}
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{target generators $\varphi_1,\ldots,\varphi_k$; seed monomials}
+\Output{code $(A,B)$ exactly invariant under $\Gamma=\langle\varphi_1,\ldots,\varphi_k\rangle$}
+$\Gamma \gets$ BFS closure of $\{\varphi_1,\ldots,\varphi_k\}$ \tcp*{identical routine to Algorithm F3's catalog closure}
+\ForEach{seed $(i,j)$}{compute orbit $\{\gamma(i,j):\gamma\in\Gamma\}$\;}
+$A \gets$ sum (in $\mathbb F_2$) of the orbit supports\;
+\tcp{by construction, $\gamma(A)=A$ for every $\gamma\in\Gamma$ [Cor.\ 3.6, $u=1$]}
+\uIf{Hadamard-fold symmetry also wanted}{$B \gets \overleftarrow{A}$ \tcp*{free, by the lemma above}}
+\Else{repeat orbit construction with a fresh seed for $B$\;}
+\Return{$(A,B)$}
+\end{algorithm}
+
+\subsection{Algorithm I2 --- independent re-verification}
+
+\begin{algorithm}[H]
+\caption{Re-verification of the constructed code}
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{constructed $(A,B)$; group $\Gamma$ from Algorithm I1}
+\Output{count of $\Gamma$-elements confirmed as automorphisms}
+$n\gets 0$\;
+\ForEach{$\gamma\in\Gamma$}{
+  \If{Algorithm F1$(\gamma,\mathrm{swap}{=}0)$ returns \textsc{true}}{$n\gets n+1$\;}
+}
+\Return{$n$ (assert $n=|\Gamma|$)}
+\end{algorithm}
+
+\begin{mynote}
+Algorithm I2 deliberately reuses Algorithm F1 verbatim rather than trusting
+Algorithm I1's construction. This closes the loop without being circular:
+Algorithm F1 has no knowledge of how $(A,B)$ was built, so a pass is
+independent evidence, not restated assumption.
+\end{mynote}
+
+%==============================================================================
+\section{Where shared algebraic structure is used}
+\label{sec:shared}
+%==============================================================================
+
+\begin{enumerate}[leftmargin=*]
+
+\item \textbf{Corollary 2.5's ``(H0)'' licenses both Thm.\ 3.1 and Thm.\
+3.2 simultaneously.} Both proofs quoted above invoke Nakayama
+\emph{componentwise, because $J_c$ is local even when $R_{\ell,m}$ is not}
+--- precisely Cor.\ 2.5. Algorithms F1 and F2 never construct the
+components $J_c$ explicitly, but their validity rests on the same single
+structural fact: it is what makes ``row space equal $\Rightarrow$ generators
+differ by a global unit'' true in the first place, for \emph{both} the
+$n=1$ and $n=4$ generator cases.
+
+\item \textbf{One routine, \texttt{generate\_group}, is used by Algorithm
+F3 and Algorithm I1.} This was not always true: an earlier version of this
+toolkit gave the forward-scan catalog its own fixed composition template
+(``one multiplier, one fold, one shear''), which is \emph{not} closed under
+composition and under-covers the true group generated by the \S2.2 catalog
+items whenever $\ell=m$ (missing interleaved $\tau$-shear compositions) or
+whenever a shear is present (the ``(and transposes)'' clause of item 4 was
+never wired in at all). Unifying the two call sites onto one BFS-closure
+routine simultaneously fixed the forward scan's coverage and confirmed the
+inverse-design code's group machinery was correct all along.
+
+\item \textbf{$\mathrm{rank}(H_X)$ and $S=\mathrm{blockdiag}(H_X,H_Z)$ are
+computed once per code}, not once per catalog element, and reused as the
+fixed operand across the whole scan (Algorithm F3's inner loops).
+
+\item \textbf{The circulant blocks $\rho(A),\rho(B),\rho(\overleftarrow{B}),
+\rho(\overleftarrow{A})$} are computed once (\texttt{BBCode.\_\_post\_init\_\_})
+and shared across $H_X$, $H_Z$, and $S$ --- the same generator data
+underlies every detection level.
+
+\item \textbf{The $\psi_L=\psi_R$ restriction is shared, not just stated.}
+\pq{\S3}{``Establish only considering $\psi_L=\psi_R$ in this work\ldots''}
+Algorithm F2 applies \emph{one} permutation to all four column-blocks of
+$S$ rather than two independent ones, which is both this stated scope
+restriction and a direct 4$\times$ reduction in per-test cost.
+
+\end{enumerate}
+
+%==============================================================================
+\section{Honest scope}
+%==============================================================================
+
+\begin{itemize}[leftmargin=*]
+\item The CRT component decomposition itself ($J_c$, Hensel lifts, local
+coordinates of \S3.2.1) is never constructed; Lemma~\ref{lem:rowspace}
+answers the same yes/no question without it, at the cost of never producing
+the per-component unit $\omega_c$ or transport map $T^*_\psi$ the outline's
+own proof machinery is built on.
+\item $\psi_L\ne\psi_R$ (\S3.3) is out of scope, matching the outline's own
+stated restriction.
+\item $g_{\mathrm{block}}$ is restricted to the six scalar matrices of
+eqs.\ (34)--(37); the fully general $g_{\mathrm{block}}\in M_4(R_{\ell,m})$
+of Thm.\ 3.2 is not searched.
+\end{itemize}
+
+\end{document}

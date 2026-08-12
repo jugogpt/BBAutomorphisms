@@ -11,15 +11,11 @@ Codes and provenance
 ---------------------
 1. [[144,12,12]] gross code            ell=12, m=6,  A = x^3+y+y^2,  B = y^3+x+x^2
    (Bravyi-Cross-Gambetta-Maslov-Rall-Yoder, arXiv:2308.07915)
-   -> even x even CRT regime (Thm 2.1 trichotomy). Convention: ell = 2^s_ell * ell'
-   with ell' odd, so s_ell is the *exponent* of 2 dividing ell, not its parity;
-   s>0 means even, regardless of the numeric value of s itself.
-   Here ell=12=2^2*3 -> s_ell=2 (even, since s_ell>=1); m=6=2^1*3 -> s_m=1
-   (also even, since s_m>=1 too -- do not read "s_m=1" as "m is odd").
+   -> even x even CRT regime (Thm 2.1 trichotomy): sl=2, sm=1.
 
 2. [[72,12,6]] BB6 code                ell=6,  m=6,  A = x^3+y+y^2,  B = y^3+x+x^2
    (same source; the "half-size" cousin of the gross code)
-   -> even x even regime: ell=6=2^1*3 -> s_ell=1 (even); m=6=2^1*3 -> s_m=1 (even).
+   -> even x even regime: sl=1, sm=1.
 
 3. [[18,4,4]] 6.6.6 color code          ell=3,  m=3,  A = x+1+y^2,   B = y+1+x^2
    (Wang et al., arXiv:2505.09684; also errorcorrectionzoo.org/c/stab_18_4_4)
@@ -39,9 +35,7 @@ Codes and provenance
    see bb_ring.reduce_twisted_torus). The reduction gives:
         ell=2, m=4,  A = 1 + y + y^3 + x y^3,  B = 1 + y + y^3 + x y
    which we verify below reproduces n=16, k=4, d=4 exactly before using it.
-   -> even x even regime: ell=2=2^1 -> s_ell=1 (even); m=4=2^2 -> s_m=2 (even).
-   (Same s>0-means-even convention as codes 1-2 above; neither s value being
-   itself odd or even matters -- only whether it is >0.)
+   -> even x even regime: sl=1, sm=2.
 """
 from bb_ring import Ring, reduce_twisted_torus, transform_terms
 from bb_code import BBCode
@@ -49,9 +43,14 @@ from bb_automorphisms import report
 
 
 def build_gross():
+
+    # l = 12, m = 2, qubit block sizes, we use two block 
     ring = Ring(12, 6)
+
     A = ring.from_terms([(3, 0), (0, 1), (0, 2)])
+
     B = ring.from_terms([(0, 3), (1, 0), (2, 0)])
+    
     return ring, BBCode(ring, A, B, name="gross")
 
 
